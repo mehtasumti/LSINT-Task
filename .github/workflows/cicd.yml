@@ -1,0 +1,48 @@
+name: CI/CD
+
+on:
+  push:
+    branches: [main]
+
+jobs:
+  build-and-deploy:
+    runs-on: ubuntu-latest
+    env:
+      IMAGE_TAG: ${{ github.sha }}
+      BACKEND_REPO: ${{ secrets.BACKEND_REPO != '' && secrets.BACKEND_REPO || format('{0}/lsint-backend', secrets.DOCKERHUB_USERNAME) }}
+      FRONTEND_REPO: ${{ secrets.FRONTEND_REPO != '' && secrets.FRONTEND_REPO || format('{0}/lsint-frontend', secrets.DOCKERHUB_USERNAME) }}
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Docker login (Docker Hub)
+        uses: docker/login-action@v3
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+
+      - name: Build & push backend
+        working-directory: LSINT-Backend
+        run: |
+          docker build -t $BACKEND_REPO:latest -t $BACKEND_REPO:$IMAGE_TAG .
+          docker push $BACKEND_REPO:latest
+          docker push $BACKEND_REPO:$IMAGE_TAG
+
+      - name: Build & push frontend
+        working-directory: LSINT-Frontend
+        run: |
+          docker build -t $FRONTEND_REPO:latest -t $FRONTEND_REPO:$IMAGE_TAG .
+          docker push $FRONTEND_REPO:latest
+          docker push $FRONTEND_REPO:$IMAGE_TAG
+
+      - name: Deploy to EC2 via SSH
+        uses: appleboy/ssh-action@v1.0.0
+        with:
+          host: ${{ secrets.SSH_HOST }}
+          username: ${{ secrets.SSH_USER }}
+          key: ${{ secrets.SSH_KEY }}
+          script: |
+            cd ~/LSINT-Task
+            docker compose pull
+            docker compose up -d
