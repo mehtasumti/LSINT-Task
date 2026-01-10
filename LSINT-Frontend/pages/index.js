@@ -44,11 +44,12 @@ export default function Home() {
         </div>
         <div className={styles.featureCard}>
           <h3>Full-Service Agency</h3>
-          <p>App development, graphic design, product photography, and consulting services</p>
+          <p>App development, graphic design, product photography, and consulting services.</p>
         </div>
       </div>
     </div>
   );
 }
+
 
 
